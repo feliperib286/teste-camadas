@@ -1,9 +1,11 @@
+// Importações necessárias do React e bibliotecas do Leaflet
 import React, { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import MarkerClusterGroup from 'react-leaflet-markercluster';
 
+// Define a estrutura esperada dos dados recebidos pelo componente
 interface BaseDado {
   latitude: number;
   longitude: number;
@@ -17,10 +19,12 @@ interface BaseDado {
   tipo: 'risco' | 'foco' | 'area_queimada';
 }
 
+// Props do componente, recebe um array de BaseDado
 interface Props {
   dados: BaseDado[];
 }
 
+// Função auxiliar que define a cor do marcador com base no valor de FRP ou risco_fogo
 const getColor = (item: BaseDado): string => {
   if (item.frp !== undefined) {
     if (item.frp >= 50) return '#800026';
@@ -40,24 +44,34 @@ const getColor = (item: BaseDado): string => {
   return '#FFEDA0';
 };
 
+// Limites geográficos do mapa (Brasil) para evitar zoom para fora
 const brasilBounds: L.LatLngBoundsExpression = [
   [-34.0, -74.0],
   [5.3, -32.4],
 ];
 
+// Componente principal do mapa
 const MapComponent: React.FC<Props> = ({ dados }) => {
+  // Estado que define se o agrupamento é por estado ou bioma
   const [modoAgrupamento, setModoAgrupamento] = useState<'estado' | 'bioma'>('estado');
+
+  // Armazena o valor atualmente selecionado (estado ou bioma)
   const [filtroSelecionado, setFiltroSelecionado] = useState<string | null>(null);
+
+  // GeoJSONs de biomas que serão exibidos como contornos
   const [cerradoGeoJson, setCerradoGeoJson] = useState<any>(null);
   const [pampaGeoJson, setPampaGeoJson]= useState<any>(null)
 
+  // Função para normalizar strings (letras minúsculas e sem espaços)
   const normalizar = (str: string) => str.trim().toLowerCase();
 
+  // Filtra apenas dados do tipo 'area_queimada'
   const dadosAreaQueimada = useMemo(
     () => dados.filter(d => d.tipo === 'area_queimada'),
     [dados]
   );
 
+  // Gera as opções únicas de estado ou bioma com base nos dados filtrados
   const opcoes = useMemo(
     () =>
       [...new Set(
@@ -68,42 +82,44 @@ const MapComponent: React.FC<Props> = ({ dados }) => {
     [dadosAreaQueimada, modoAgrupamento]
   );
 
-  // Corrigido: seleciona automaticamente a primeira opção, se existir
+  // Seleciona automaticamente a primeira opção quando as opções mudam
   useEffect(() => {
     if (opcoes.length > 0) {
-    setFiltroSelecionado(opcoes[0]); // força atualização sempre que o grupo muda
-  }
-}, [opcoes]);
+      setFiltroSelecionado(opcoes[0]);
+    }
+  }, [opcoes]);
 
   // Carrega o GeoJSON do Cerrado
   useEffect(() => {
-      console.log('🔍 filtroSelecionado:', filtroSelecionado);
     fetch('/cerrado.geojson')
       .then(res => res.json())
       .then(data => setCerradoGeoJson(data));
   }, []);
 
+  // Carrega o GeoJSON do Pampa
   useEffect(() => {
-      console.log('🔍 filtroSelecionado:', filtroSelecionado);
     fetch('/pampa.geojson')
       .then(res => res.json())
       .then(data => setPampaGeoJson(data));
   }, []);
 
-
+  // Estilo visual do contorno do Cerrado
   const estiloCerrado = {
-  color: '#FF0000',      // vermelho
-  weight: 2,             // espessura
-  fillOpacity: 0,        // sem preenchimento
-  opacity: 1             // borda visível
-};
-const estiloPampa = {
-  color: '#FF0000',      // vermelho
-  weight: 2,             // espessura
-  fillOpacity: 0,        // sem preenchimento
-  opacity: 1             // borda visível
-};
+    color: '#FF0000',
+    weight: 2,
+    fillOpacity: 0,
+    opacity: 1
+  };
 
+  // Estilo visual do contorno do Pampa
+  const estiloPampa = {
+    color: '#FF0000',
+    weight: 2,
+    fillOpacity: 0,
+    opacity: 1
+  };
+
+  // Gera os marcadores com cores e popups personalizados
   const markers = useMemo(() =>
     dados.map((item, idx) => (
       <Marker
@@ -132,8 +148,10 @@ const estiloPampa = {
     [dados]
   );
 
+  // Renderização do componente
   return (
     <>
+      {/* Controles de filtro */}
       <div style={{ padding: '1rem' }}>
         <label>Agrupar por:</label>
         <select
@@ -160,6 +178,7 @@ const estiloPampa = {
         </select>
       </div>
 
+      {/* Componente de Mapa */}
       <MapContainer
         center={[-15.78, -47.92]}
         zoom={4}
@@ -167,17 +186,17 @@ const estiloPampa = {
         maxBounds={brasilBounds}
         maxBoundsViscosity={1.0}
       >
+        {/* Camada base do mapa */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; OpenStreetMap contributors'
         />
 
-        {/* Exibe o contorno do cerrado SOMENTE quando ele for selecionado */}
-     {cerradoGeoJson && <GeoJSON data={cerradoGeoJson} style={() => estiloCerrado} />}
-     {pampaGeoJson && <GeoJSON data={pampaGeoJson} style={() => estiloPampa} />}
+        {/* Contornos dos biomas */}
+        {cerradoGeoJson && <GeoJSON data={cerradoGeoJson} style={() => estiloCerrado} />}
+        {pampaGeoJson && <GeoJSON data={pampaGeoJson} style={() => estiloPampa} />}
 
-
-
+        {/* Agrupamento de marcadores com contagem */}
         <MarkerClusterGroup
           iconCreateFunction={(cluster) => {
             const count = cluster.getChildCount();
