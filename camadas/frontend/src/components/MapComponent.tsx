@@ -49,6 +49,7 @@ const MapComponent: React.FC<Props> = ({ dados }) => {
   const [modoAgrupamento, setModoAgrupamento] = useState<'estado' | 'bioma'>('estado');
   const [filtroSelecionado, setFiltroSelecionado] = useState<string | null>(null);
   const [cerradoGeoJson, setCerradoGeoJson] = useState<any>(null);
+  const [pampaGeoJson, setPampaGeoJson]= useState<any>(null)
 
   const normalizar = (str: string) => str.trim().toLowerCase();
 
@@ -82,7 +83,21 @@ const MapComponent: React.FC<Props> = ({ dados }) => {
       .then(data => setCerradoGeoJson(data));
   }, []);
 
+  useEffect(() => {
+      console.log('🔍 filtroSelecionado:', filtroSelecionado);
+    fetch('/pampa.geojson')
+      .then(res => res.json())
+      .then(data => setPampaGeoJson(data));
+  }, []);
+
+
   const estiloCerrado = {
+  color: '#FF0000',      // vermelho
+  weight: 2,             // espessura
+  fillOpacity: 0,        // sem preenchimento
+  opacity: 1             // borda visível
+};
+const estiloPampa = {
   color: '#FF0000',      // vermelho
   weight: 2,             // espessura
   fillOpacity: 0,        // sem preenchimento
@@ -159,6 +174,7 @@ const MapComponent: React.FC<Props> = ({ dados }) => {
 
         {/* Exibe o contorno do cerrado SOMENTE quando ele for selecionado */}
      {cerradoGeoJson && <GeoJSON data={cerradoGeoJson} style={() => estiloCerrado} />}
+     {pampaGeoJson && <GeoJSON data={pampaGeoJson} style={() => estiloPampa} />}
 
 
 
